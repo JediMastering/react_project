@@ -15,7 +15,7 @@ const fetchData = async (url, setData) => {
 
     setData(result.content);
   } catch (error) {
-    console.error('Erro ao buscar dados:', error);
+    console.error('Erro ao buscar dados:', error.message);
   }
 };
 
@@ -27,10 +27,23 @@ const postData = async (url, data) => {
       headers,
       body: JSON.stringify(data),
     });
-    if (!response.ok) throw new Error('Erro ao enviar dados');
+
+    if (!response.ok) {
+      // Se a resposta não for OK, tenta transformar a resposta em JSON
+      const errorData = await response.json();
+      throw errorData; // Lança o objeto de erro JSON para o catch
+    }
+
     return true;
   } catch (error) {
-    console.error('Erro na requisição:', error);
+    // Aqui, `error` é o objeto de erro JSON retornado do backend
+    if (error && error.errors) {
+      error.errors.forEach(err => {
+        console.error('Erro ao enviar dados:', err.defaultMessage);
+      });
+    } else {
+      console.error('Erro genérico ao enviar dados:', error.message || error);
+    }
     return false;
   }
 };
@@ -42,7 +55,7 @@ const deleteData = async (url) => {
     if (!response.ok) throw new Error('Erro ao apagar dados');
     return true;
   } catch (error) {
-    console.error('Erro ao apagar dados:', error);
+    console.error('Erro ao apagar dados:', error.message);
     return false;
   }
 };
@@ -59,7 +72,7 @@ const App = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    const isSuccess = await postData('http://localhost:8080/test/register1', { nome, login });
+    const isSuccess = await postData('http://localhost:8080/test/register', { nome, login });
     if (isSuccess) {
       console.log('Dados enviados com sucesso');
       fetchData('http://localhost:8080/test/', setData);
@@ -83,7 +96,7 @@ const App = () => {
           <label>Nome:</label>
           <input type='text' value={nome} onChange={(e) => setNome(e.target.value)} />
           <br />
-          <label>Senha:</label>
+          <label>Login:</label>
           <input type='text' value={login} onChange={(e) => setEmail(e.target.value)} />
           <br />
           <button type='submit'>Enviar</button>
